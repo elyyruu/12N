@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduControl - Grupo 502</title>
+    <style>
+        :root { --primary: #004085; --success: #28a745; --danger: #dc3545; --bg: #f4f4f9; }
+        body { font-family: system-ui, sans-serif; background: var(--bg); margin: 0; padding: 15px; color: #333; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2 { color: var(--primary); text-align: center; margin-top: 0; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 4px; font-weight: bold; font-size: 13px; }
+        input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; box-sizing: border-box; }
+        .row { display: flex; gap: 10px; }
+        .row .form-group { flex: 1; }
+        button { background: var(--primary); color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 5px; }
+        button:hover { background: #002752; }
+        .btn-danger { background: var(--danger); width: auto; padding: 5px 10px; font-size: 12px; }
+        .btn-danger:hover { background: #bd2130; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: var(--primary); color: white; }
+        .status-aprobado { color: var(--success); font-weight: bold; }
+        .status-reprobado { color: var(--danger); font-weight: bold; }
+        .stats-box { background: #e9ecef; padding: 10px; border-radius: 4px; margin-top: 15px; font-size: 13px; display: flex; justify-content: space-between; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>🎓 EduControl - Grupo 502</h2>
+        <p style="font-size: 12px; color: #666; text-align: center;">Sistema de Registro de Alumnos y Promedios</p>
+
+        <!-- FORMULARIO DE REGISTRO -->
+        <div class="form-group">
+            <label for="txtNombre">Nombre Completo del Alumno:</label>
+            <input type="text" id="txtNombre" placeholder="Ej. Pérez Gómez Juan">
+        </div>
+
+        <div class="row">
+            <div class="form-group">
+                <label for="numParcial1">Calificación Parcial 1:</label>
+                <input type="number" id="numParcial1" min="0" max="10" step="0.1" placeholder="0 - 10">
+            </div>
+            <div class="form-group">
+                <label for="numParcial2">Calificación Parcial 2:</label>
+                <input type="number" id="numParcial2" min="0" max="10" step="0.1" placeholder="0 - 10">
+            </div>
+        </div>
+
+        <button onclick="guardarAlumno()">Registrar y Calcular Promedio</button>
+
+        <!-- RESUMEN ESTADÍSTICO -->
+        <div class="stats-box">
+            <span>Total Alumnos: <strong id="lblTotal">0</strong></span>
+            <span>Promedio General: <strong id="lblPromedioGeneral">0.0</strong></span>
+        </div>
+
+        <!-- TABLA DE RESULTADOS -->
+        <table>
+            <thead>
+                <tr>
+                    <th>Alumno</th>
+                    <th>P1</th>
+                    <th>P2</th>
+                    <th>Promedio</th>
+                    <th>Estado</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody id="tablaAlumnos">
+                <!-- Se llena dinámicamente con JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Cargar datos al abrir la página
+        window.onload = function() {
+            renderizarTabla();
+        };
+
+        function obtenerAlumnos() {
+            let datos = localStorage.getItem("educontrol_alumnos_502");
+            return datos ? JSON.parse(datos) : [];
+        }
+
+        function guardarAlumno() {
+            let nombre = document.getElementById("txtNombre").value.trim();
+            let p1 = parseFloat(document.getElementById("numParcial1").value);
+            let p2 = parseFloat(document.getElementById("numParcial2").value);
+
+            // Validaciones
+            if (nombre === "" || isNaN(p1) || isNaN(p2)) {
+                alert("Por favor complete todos los campos con valores válidos.");
+                return;
+            }
+
+            if (p1 < 0 || p1 > 10 || p2 < 0 || p2 > 10) {
+                alert("Las calificaciones deben estar en una escala de 0 a 10.");
+                return;
+            }
+
+            let promedio = ((p1 + p2) / 2).toFixed(1);
+
+            let lista = obtenerAlumnos();
+            lista.push({ nombre: nombre, p1: p1, p2: p2, promedio: parseFloat(promedio) });
+            
+            localStorage.setItem("educontrol_alumnos_502", JSON.stringify(lista));
+
+            // Limpiar campos
+            document.getElementById("txtNombre").value = "";
+            document.getElementById("numParcial1").value = "";
+            document.getElementById("numParcial2").value = "";
+
+            renderizarTabla();
+        }
+
+        function eliminarAlumno(index) {
+            if (confirm("¿Desea eliminar este registro?")) {
+                let lista = obtenerAlumnos();
+                lista.splice(index, 1);
+                localStorage.setItem("educontrol_alumnos_502", JSON.stringify(lista));
+                renderizarTabla();
+            }
+        }
+
+        function renderizarTabla() {
+            let lista = obtenerAlumnos();
+            let tbody = document.getElementById("tablaAlumnos");
+            tbody.innerHTML = "";
+
+            if (lista.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#777;">No hay alumnos registrados.</td></tr>`;
+                document.getElementById("lblTotal").innerText = "0";
+                document.getElementById("lblPromedioGeneral").innerText = "0.0";
+                return;
+            }
+
+            let sumaPromedios = 0;
+
+            lista.forEach((alump, index) => {
+                sumaPromedios += alump.promedio;
+                let esAprobado = alump.promedio >= 6.0;
+                let estadoClase = esAprobado ? "status-aprobado" : "status-reprobado";
+                let estadoTexto = esAprobado ? "Aprobado" : "Reprobado";
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${alump.nombre}</td>
+                        <td>${alump.p1}</td>
+                        <td>${alump.p2}</td>
+                        <td><strong>${alump.promedio}</strong></td>
+                        <td><span class="${estadoClase}">${estadoTexto}</span></td>
+                        <td><button class="btn-danger" onclick="eliminarAlumno(${index})">Eliminar</button></td>
+                    </tr>
+                `;
+            });
+
+            let promedioGeneral = (sumaPromedios / lista.length).toFixed(1);
+            document.getElementById("lblTotal").innerText = lista.length;
+            document.getElementById("lblPromedioGeneral").innerText = promedioGeneral;
+        }
+    </script>
+</body>
+</html>
